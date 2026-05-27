@@ -13,13 +13,14 @@ db.channel('posts-channel')
   })
   .subscribe();
 
+// 3. Функция загрузки арта
 async function Save() {
     const fileInput = document.getElementById("image");
     const titleInput = document.getElementById("Title");
     const descrInput = document.getElementById("description");
     const file = fileInput.files[0];
 
-    if (!file || !titleInput.value) return alert("Бро, заповни все!");
+    if (!file || !titleInput.value) return alert("Бро, заполни всё!");
 
     try {
         const fileName = `${Date.now()}_${file.name}`;
@@ -27,21 +28,25 @@ async function Save() {
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = db.storage.from('arts').getPublicUrl(fileName);
+        
+        // Вставляем с датой
         const { error: dbError } = await db.from('posts').insert([{ 
             title: titleInput.value, 
             description: descrInput.value,
             image_url: publicUrlData.publicUrl,
-            likes: 0 
+            likes: 0,
+            created_at: new Date().toISOString() 
         }]);
 
         if (dbError) throw dbError;
-        alert("Арт залетів на сервер!");
+        alert("Арт залетел на сервер!");
         window.location.href = "index.html";
     } catch (err) {
         alert("Ошибка: " + err.message);
     }
 }
 
+// 4. Рендер галереи
 async function render() {
     const gallery = document.getElementById('gallery');
     if (!gallery) return;
@@ -71,10 +76,12 @@ async function render() {
     `).join('');
 }
 
+// 5. Лайк / Снятие лайка
 async function LikePost(id, currentLikes) {
     let likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
     const isLiked = likedPosts.includes(id);
 
+    // Если лайкнут - вычитаем, если нет - прибавляем
     const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
 
     const { error } = await db.from('posts').update({ likes: newLikes }).eq('id', id);
@@ -90,6 +97,7 @@ async function LikePost(id, currentLikes) {
     }
 }
 
+// 6. Обновление статистики
 async function updateStats() {
     const { count: allCount } = await db.from('posts').select('*', { count: 'exact', head: true });
     const { data: likesData } = await db.from('posts').select('likes');
