@@ -1,4 +1,3 @@
-// 1. Инициализация (вставь свои данные из Supabase Settings -> API)
 const supabase = supabase.createClient('https://vcmtioxcfugypkbmgxki.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbXRpb3hjZnVneXBrYm1neGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc3ODIsImV4cCI6MjA5NTQ1Mzc4Mn0.mB4yu1HhB7mDVBvny2rnjRfztUMD-okPv4Yg4ZfwBHw');
 
 let currentMode = 'newest';
