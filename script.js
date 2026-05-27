@@ -1,131 +1,90 @@
+// 1. Инициализация (вставь свои данные из Supabase Settings -> API)
+const supabase = supabase.createClient('https://vcmtioxcfugypkbmgxki.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbXRpb3hjZnVneXBrYm1neGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc3ODIsImV4cCI6MjA5NTQ1Mzc4Mn0.mB4yu1HhB7mDVBvny2rnjRfztUMD-okPv4Yg4ZfwBHw');
+
 let currentMode = 'newest';
 
-// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     render();
 });
 
-function Save() {
+async function Save() {
     let fileInput = document.getElementById("image");
     let file = fileInput.files[0];
+    let title = document.getElementById("Title").value;
+    let descr = document.getElementById("description").value;
 
-    if (!file) {
-        alert("Бро, выбери файл!");
+    if (!file || !title) {
+        alert("Бро, заполни всё!");
         return;
     }
 
-    let reader = new FileReader();
-    reader.onload = function(e) {
-        let newPost = {
-            id: Date.now(), // Уникальный ID для каждого поста
-            title: document.getElementById("Title").value,
-            descr: document.getElementById("description").value,
-            image: e.target.result,
-            likes: 0,
-            timestamp: Date.now()
-        };
+    // Загрузка картинки в Storage
+    const fileName = `${Date.now()}_${file.name}`;
+    const { data: storageData, error: storageError } = await supabase.storage
+        .from('arts') // Убедись, что бакет называется 'arts'
+        .upload(fileName, file);
 
-        let posts = JSON.parse(localStorage.getItem('myPosts')) || [];
-        posts.push(newPost);
-        localStorage.setItem('myPosts', JSON.stringify(posts));
-        
-        render();
-    };
+    if (storageError) { alert("Ошибка файла: " + storageError.message); return; }
 
-    reader.readAsDataURL(file);
+    // Получаем ссылку
+    const { data: publicUrlData } = supabase.storage.from('arts').getPublicUrl(fileName);
+
+    // Сохраняем пост в БД
+    const { error: dbError } = await supabase
+        .from('posts')
+        .insert([{ 
+            title: title, 
+            description: descr, // В БД у тебя колонка 'description'
+            image_url: publicUrlData.publicUrl, 
+            likes: 0 
+        }]);
+
+    if (dbError) { alert("Ошибка БД: " + dbError.message); return; }
+
+    alert("Арт успешно загружен!");
+    render();
 }
 
-function updateCounters(posts) {
-    let now = Date.now();
-    let oneDay = 24 * 60 * 60 * 1000;
-
-    let todayEl = document.getElementById('artsTodayCount');
-    let allEl = document.getElementById('artsAllTimeCount');
-    let likesEl = document.getElementById('allArtsLikes');
-
-    if (todayEl) todayEl.innerText = posts.filter(p => (now - p.timestamp) < oneDay).length;
-    if (allEl) allEl.innerText = posts.length;
-    if (likesEl) likesEl.innerText = posts.reduce((sum, p) => sum + (p.likes || 0), 0);
-}
-
-function getProcessedPosts() {
-    let posts = JSON.parse(localStorage.getItem('myPosts')) || [];
-    let now = Date.now();
-    let oneDay = 24 * 60 * 60 * 1000;
-    let oneWeek = 7 * oneDay;
-
-    updateCounters(posts);
-
-    let filtered = [...posts]; // Копируем массив, чтобы не менять оригинал при сортировке
-
-    switch (currentMode) {
-        case 'topToday':
-            return filtered
-                .filter(p => (now - p.timestamp) < oneDay)
-                .sort((a, b) => b.likes - a.likes);
-        case 'topWeek':
-            return filtered
-                .filter(p => (now - p.timestamp) < oneWeek)
-                .sort((a, b) => b.likes - a.likes);
-        case 'newest':
-        default:
-            return filtered.sort((a, b) => b.timestamp - a.timestamp);
-    }
-}
-
-function render() {
+// Функция получения постов с сервера
+async function render() {
     let gallery = document.getElementById('gallery');
     if (!gallery) return;
 
-    let posts = getProcessedPosts();
-    let likedPosts = JSON.parse(localStorage.getItem('likedPosts')) || [];
-    gallery.innerHTML = '';
+    // Запрос в базу данных
+    let { data: posts, error } = await supabase
+        .from('posts')
+        .select('*');
 
+    if (error) { console.error(error); return; }
+
+    gallery.innerHTML = '';
     posts.forEach(post => {
-        let alreadyLiked = likedPosts.includes(post.id);
         gallery.innerHTML += `
             <div class="card">
                 <h2>${post.title}</h2>
-                <p>${post.descr}</p>
-                <img src="${post.image}" width="200">
-                <button onclick="LikePost(${post.id})">
-                    ${alreadyLiked ? '❤️' : '🤍'} ${post.likes}
-                </button>
+                <p>${post.description}</p>
+                <img src="${post.image_url}" width="200">
+                <button onclick="LikePost(${post.id})">🤍 ${post.likes}</button>
             </div>
         `;
     });
 }
 
-function SetMode(mode) {
-    currentMode = mode;
-    
-    // Убираем активный класс у всех кнопок
-    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // Добавляем активный класс нажатой кнопке
-    event.target.classList.add('active');
-    
-    render();
-}
+// Лайк (теперь он обновляет базу)
+async function LikePost(postId) {
+    // В реальном проекте тут нужна логика проверки лайкал ли юзер, 
+    // но для начала просто делаем инкремент в базе
+    const { data, error } = await supabase
+        .from('posts')
+        .select('likes')
+        .eq('id', postId)
+        .single();
 
-function LikePost(postId) {
-    let likedPosts = JSON.parse(localStorage.getItem('likedPosts')) || [];
-    let posts = JSON.parse(localStorage.getItem('myPosts')) || [];
-    let post = posts.find(p => p.id === postId);
-    
-    if (!post) return;
-
-    if (likedPosts.includes(postId)) {
-        // Снимаем лайк
-        post.likes--;
-        likedPosts = likedPosts.filter(id => id !== postId);
-    } else {
-        // Ставим лайк
-        post.likes++;
-        likedPosts.push(postId);
+    if (data) {
+        await supabase
+            .from('posts')
+            .update({ likes: data.likes + 1 })
+            .eq('id', postId);
+        render();
     }
-
-    localStorage.setItem('myPosts', JSON.stringify(posts));
-    localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
-    render();
 }
