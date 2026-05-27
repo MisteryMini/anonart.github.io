@@ -79,15 +79,33 @@ async function render() {
 }
 
 async function LikePost(id, currentLikes) {
+    // 1. Получаем актуальный список лайков с телефона (пустой, если не лайкал)
     let likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
     const isLiked = likedPosts.includes(id);
-    const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
 
-    const { error } = await db.from('posts').update({ likes: newLikes }).eq('id', id);
-    if (!error) {
-        likedPosts = isLiked ? likedPosts.filter(p => p !== id) : [...likedPosts, id];
+    if (isLiked) {
+        alert("Бро, ты уже лайкнул это!");
+        return;
+    }
+
+    // 2. Делаем запрос к базе
+    try {
+        const { error } = await db.from('posts').update({ likes: currentLikes + 1 }).eq('id', id);
+        
+        if (error) {
+            console.error("Ошибка базы:", error);
+            alert("Ошибка сети или прав: " + error.message);
+            return;
+        }
+
+        // 3. Если всё ок, пишем в локалку телефона
+        likedPosts.push(id);
         localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+        
+        // 4. Рендер вызовется сам через Realtime, но можно и принудительно
         render();
+    } catch (err) {
+        alert("Чет сломалось: " + err);
     }
 }
 
