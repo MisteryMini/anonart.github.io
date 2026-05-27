@@ -5,6 +5,49 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentMode = 'newest';
 
+async function Save() {
+    const fileInput = document.getElementById("image");
+    const titleInput = document.getElementById("Title");
+    const descrInput = document.getElementById("description");
+
+    const file = fileInput.files[0];
+    if (!file || !titleInput.value) {
+        alert("Бро, заполни всё и выбери файл!");
+        return;
+    }
+
+    try {
+        // 1. Грузим картинку в бакет 'arts'
+        const fileName = `${Date.now()}_${file.name}`;
+        const { error: uploadError } = await db.storage
+            .from('arts')
+            .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // 2. Получаем публичную ссылку
+        const { data: publicUrlData } = db.storage.from('arts').getPublicUrl(fileName);
+
+        // 3. Создаем запись в таблице 'posts'
+        const { error: dbError } = await db
+            .from('posts')
+            .insert([{ 
+                title: titleInput.value, 
+                description: descrInput.value,
+                image_url: publicUrlData.publicUrl,
+                likes: 0 
+            }]);
+
+        if (dbError) throw dbError;
+
+        alert("Арт залетел на сервер!");
+        window.location.href = "index.html"; // Перекидываем обратно на главную
+    } catch (err) {
+        console.error(err);
+        alert("Ошибка при сохранении: " + err.message);
+    }
+}
+
 async function render() {
     const gallery = document.getElementById('gallery');
     if (!gallery) return;
