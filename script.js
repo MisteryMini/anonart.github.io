@@ -75,12 +75,28 @@ async function render() {
 // 4. Лайк
 async function LikePost(id, currentLikes) {
     if (!db) return;
+
+    // Проверяем, есть ли уже лайк для этого ID в локальной памяти браузера
+    const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+    
+    if (likedPosts.includes(id)) {
+        return; // Выходим из функции, не отправляя запрос в базу
+    }
+
+    // Если лайка нет — обновляем базу
     const { error } = await db
         .from('posts')
         .update({ likes: currentLikes + 1 })
         .eq('id', id);
 
-    if (!error) render();
+    if (!error) {
+        // Запоминаем, что мы лайкнули этот пост
+        likedPosts.push(id);
+        localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+        
+        // Меняем цвет кнопки или просто перерисовываем
+        render(); 
+    }
 }
 async function updateStats() {
     if (!db) return;
