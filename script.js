@@ -82,6 +82,39 @@ async function LikePost(id, currentLikes) {
 
     if (!error) render();
 }
+async function updateStats() {
+    if (!db) return;
 
+    // 1. Всего малюнків
+    const { count: allCount, error: err1 } = await db
+        .from('posts')
+        .select('*', { count: 'exact', head: true });
+
+    // 2. Вподобайки (сумма всех лайков)
+    const { data: likesData, error: err2 } = await db
+        .from('posts')
+        .select('likes');
+
+    // 3. Малюнки сегодня
+    // Берем текущую дату в формате YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+    const { count: todayCount, error: err3 } = await db
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', today); // gte = Greater Than or Equal (больше или равно)
+
+    // Обновляем HTML
+    if (document.getElementById("artsAllTimeCount")) 
+        document.getElementById("artsAllTimeCount").innerText = allCount || 0;
+    
+    if (document.getElementById("artsTodayCount")) 
+        document.getElementById("artsTodayCount").innerText = todayCount || 0;
+
+    if (document.getElementById("allArtsLikes")) {
+        const totalLikes = likesData ? likesData.reduce((sum, post) => sum + post.likes, 0) : 0;
+        document.getElementById("allArtsLikes").innerText = totalLikes;
+    }
+}
 // Автозапуск рендера на главной
 document.addEventListener('DOMContentLoaded', render);
+updateStats();
