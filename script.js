@@ -1,19 +1,22 @@
-// 1. Настройка Supabase
 const SUPABASE_URL = 'https://vcmtioxcfugypkbmgxki.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbXRpb3hjZnVneXBrYm1neGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc3ODIsImV4cCI6MjA5NTQ1Mzc4Mn0.mB4yu1HhB7mDVBvny2rnjRfztUMD-okPv4Yg4ZfwBHw';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentMode = 'newest';
+let isAdmin = false;
 
-// 2. Реальное время (авто-обновление у всех)
+function checkAdmin() {
+    isAdmin = localStorage.getItem('admin-key') === 'OIJoijOIJOI!JIoij1oijOIJ534356OIJUIHUsjsufuuhi';
+    render();
+}
+
 db.channel('posts-channel')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-      render();
-      updateStats();
-  })
-  .subscribe();
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+        render();
+        updateStats();
+    })
+    .subscribe();
 
-// 3. Функция загрузки арта
 async function Save() {
     const fileInput = document.getElementById("image");
     const titleInput = document.getElementById("Title");
@@ -28,14 +31,13 @@ async function Save() {
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = db.storage.from('arts').getPublicUrl(fileName);
-        
-        // Вставляем с датой
-        const { error: dbError } = await db.from('posts').insert([{ 
-            title: titleInput.value, 
+
+        const { error: dbError } = await db.from('posts').insert([{
+            title: titleInput.value,
             description: descrInput.value,
             image_url: publicUrlData.publicUrl,
             likes: 0,
-            created_at: new Date().toISOString() 
+            created_at: new Date().toISOString()
         }]);
 
         if (dbError) throw dbError;
@@ -46,7 +48,6 @@ async function Save() {
     }
 }
 
-// 4. Рендер галереи
 async function render() {
     const gallery = document.getElementById('gallery');
     if (!gallery) return;
@@ -72,32 +73,31 @@ async function render() {
             <button onclick="LikePost(${post.id}, ${post.likes})">
                 ${likedPosts.includes(post.id) ? '❤️' : '🤍'} ${post.likes}
             </button>
+            ${isAdmin ? `<button onclick="DeletePost(${post.id})" style="color:red;">🗑 Удалить</button>` : ''}
         </div>
     `).join('');
 }
 
-// 5. Лайк / Снятие лайка
+async function DeletePost(id) {
+    if (!isAdmin) return;
+    if (!confirm("Удалить этот пост?")) return;
+    const { error } = await db.from('posts').delete().eq('id', id);
+    if (error) alert("Ошибка: " + error.message);
+}
+
 async function LikePost(id, currentLikes) {
     let likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
     const isLiked = likedPosts.includes(id);
-
-    // Если лайкнут - вычитаем, если нет - прибавляем
     const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
 
     const { error } = await db.from('posts').update({ likes: newLikes }).eq('id', id);
-
     if (!error) {
-        if (isLiked) {
-            likedPosts = likedPosts.filter(postId => postId !== id);
-        } else {
-            likedPosts.push(id);
-        }
+        likedPosts = isLiked ? likedPosts.filter(p => p !== id) : [...likedPosts, id];
         localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
         render();
     }
 }
 
-// 6. Обновление статистики
 async function updateStats() {
     const { count: allCount } = await db.from('posts').select('*', { count: 'exact', head: true });
     const { data: likesData } = await db.from('posts').select('likes');
@@ -117,6 +117,6 @@ function SetMode(mode) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    render();
+    checkAdmin();
     updateStats();
 });
