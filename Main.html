@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>Главная Страница</title>
+    <link rel="shortcut icon" href="Images/favicon.svg" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <header class="header">
+        <img src="Images/icon.svg" alt="Icon">
+        <a href="index.html">+ Загрузить</a>
+    </header>
+    <section class="hero">
+        <div class="hero__container">
+            <h1 class="main__text" style="margin-top: 28px;">Рисуй анонимно.</h1>
+            <h1 class="yellow__text">Делись смело.</h1>
+            <p class="text__secondary" style="margin-top: 12px;">Никаких аккаунтов. Только арт и лайки.</p>
+            <a href="index.html">Загрузить рисунок</a>
+        </div>
+    </section>
+    <section class="stats">
+        <div class="stats__container">
+            <ul>
+                <li>
+                    <div class="alltimearts">
+                        <h1 class="main__text" id="artsAllTimeCount" style="margin-top: 9px;">0</h1>
+                        <p class="text__secondary">рисунков</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="artstoday">
+                        <h1 class="main__text" id="artsTodayCount" style="margin-top: 9px;">0</h1>
+                        <p class="text__secondary">рисунков сегодня</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="likes">
+                        <h1 class="main__text" id="allArtsLikes" style="margin-top: 9px;">0</h1>
+                        <p class="text__secondary">лайков</p>
+                    </div>
+                </li>
+            </ul>
+
+
+            
+
+            </div>
+        </div>
+    </section>
+    <section class="modebtns">
+        <ul style="margin-left: 5px;">
+            <li>
+                <h1 class="main__text">Свежее</h1>
+            </li>
+            <li>
+                <button class="mode-btn" onclick="SetMode('newest')">Новые</button>
+            </li>
+            <li>
+                <button class="mode-btn" onclick="SetMode('topToday')">Топ дня</button>
+            </li>
+            <li>
+                <button class="mode-btn" onclick="SetMode('topWeek')">Топ недели</button>                
+            </li>
+        </ul>
+    </section>
+    <div id="gallery" class="gallery-container"></div>
+    <section class="endsite">
+        <div class="endsite__container">
+            <p class="text__secondary" style="margin-top: 12px;">anonart — анонимно · честно · пикселями</p>
+        </div>
+    </section>
+    
+    <script src="script.js"></script>
+</body>
+</html>
