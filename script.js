@@ -78,6 +78,19 @@ async function render() {
     `).join('');
 }
 
+async function LikePost(id, currentLikes) {
+    let likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+    const isLiked = likedPosts.includes(id);
+    const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
+
+    const { error } = await db.from('posts').update({ likes: newLikes }).eq('id', id);
+    if (!error) {
+        likedPosts = isLiked ? likedPosts.filter(p => p !== id) : [...likedPosts, id];
+        localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+        render();
+    }
+}
+
 async function DeletePost(id) {
     if (!isAdmin) return;
     if (!confirm("Удалить этот пост?")) return;
@@ -85,12 +98,9 @@ async function DeletePost(id) {
     const { data: post, error: fetchError } = await db.from('posts').select('image_url').eq('id', id).single();
     if (fetchError) return alert("Ошибка: " + fetchError.message);
 
-    console.log("полный url:", post.image_url);
     const fileName = post.image_url.split('/arts/')[1];
-    console.log("имя файла:", fileName);
-
     const { error: storageError } = await db.storage.from('arts').remove([fileName]);
-    console.log("ошибка storage:", storageError);
+    if (storageError) return alert("Ошибка удаления файла: " + storageError.message);
 
     const { error: dbError } = await db.from('posts').delete().eq('id', id);
     if (dbError) alert("Ошибка: " + dbError.message);
