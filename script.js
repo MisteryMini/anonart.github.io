@@ -19,7 +19,7 @@ async function Save() {
     const descrInput = document.getElementById("description");
     const file = fileInput.files[0];
 
-    if (!file || !titleInput.value) return alert("Бро, заполни всё!");
+    if (!file || !titleInput.value) return alert("Бро, заповни все!");
 
     try {
         const fileName = `${Date.now()}_${file.name}`;
@@ -35,7 +35,7 @@ async function Save() {
         }]);
 
         if (dbError) throw dbError;
-        alert("Арт залетел на сервер!");
+        alert("Арт залетів на сервер!");
         window.location.href = "index.html";
     } catch (err) {
         alert("Ошибка: " + err.message);
