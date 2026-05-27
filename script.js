@@ -3,11 +3,6 @@ const SUPABASE_URL = 'https://vcmtioxcfugypkbmgxki.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbXRpb3hjZnVneXBrYm1neGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc3ODIsImV4cCI6MjA5NTQ1Mzc4Mn0.mB4yu1HhB7mDVBvny2rnjRfztUMD-okPv4Yg4ZfwBHw';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const isAdmin = localStorage.getItem('admin_secret') === 'MY_SECRET_KEY_123';
-
-// Внутри map:
-${isAdmin ? `<button onclick="DeletePost(${post.id})">Удалить</button>` : ''}
-
 let currentMode = 'newest';
 
 // 2. Реальное время (авто-обновление у всех)
@@ -119,13 +114,6 @@ async function updateStats() {
 function SetMode(mode) {
     currentMode = mode;
     render();
-}
-
-async function DeletePost(id) {
-    if (!confirm("Удалить этот арт?")) return;
-    const { error } = await db.from('posts').delete().eq('id', id);
-    if (error) alert("Ошибка удаления");
-    else render();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
