@@ -85,11 +85,12 @@ async function DeletePost(id) {
     const { data: post, error: fetchError } = await db.from('posts').select('image_url').eq('id', id).single();
     if (fetchError) return alert("Ошибка: " + fetchError.message);
 
-    // Вытаскиваем имя файла из урла
+    console.log("полный url:", post.image_url);
     const fileName = post.image_url.split('/arts/')[1];
+    console.log("имя файла:", fileName);
 
     const { error: storageError } = await db.storage.from('arts').remove([fileName]);
-    if (storageError) return alert("Ошибка удаления файла: " + storageError.message);
+    console.log("ошибка storage:", storageError);
 
     const { error: dbError } = await db.from('posts').delete().eq('id', id);
     if (dbError) alert("Ошибка: " + dbError.message);
