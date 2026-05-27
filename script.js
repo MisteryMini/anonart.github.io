@@ -1,89 +1,87 @@
-const supabase = supabase.createClient('https://vcmtioxcfugypkbmgxki.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbXRpb3hjZnVneXBrYm1neGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc3ODIsImV4cCI6MjA5NTQ1Mzc4Mn0.mB4yu1HhB7mDVBvny2rnjRfztUMD-okPv4Yg4ZfwBHw');
+// 1. Настройка Supabase
+const SUPABASE_URL = 'https://vcmtioxcfugypkbmgxki.supabase.co'; // Сюда твой Project URL
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbXRpb3hjZnVneXBrYm1neGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc3ODIsImV4cCI6MjA5NTQ1Mzc4Mn0.mB4yu1HhB7mDVBvny2rnjRfztUMD-okPv4Yg4ZfwBHw';       // Сюда твой ANON KEY
 
-let currentMode = 'newest';
+// Безопасная инициализация
+const db = typeof supabase !== 'undefined' 
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) 
+    : null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    render();
-});
-
+// 2. Функция сохранения (для страницы загрузки)
 async function Save() {
-    let fileInput = document.getElementById("image");
-    let file = fileInput.files[0];
-    let title = document.getElementById("Title").value;
-    let descr = document.getElementById("description").value;
+    if (!db) return alert("Ошибка: Supabase не подключен!");
 
-    if (!file || !title) {
-        alert("Бро, заполни всё!");
-        return;
-    }
+    const fileInput = document.getElementById("image");
+    const titleInput = document.getElementById("Title");
+    const descrInput = document.getElementById("description");
 
-    // Загрузка картинки в Storage
-    const fileName = `${Date.now()}_${file.name}`;
-    const { data: storageData, error: storageError } = await supabase.storage
-        .from('arts') // Убедись, что бакет называется 'arts'
-        .upload(fileName, file);
+    const file = fileInput.files[0];
+    if (!file || !titleInput.value) return alert("Бро, заполни всё!");
 
-    if (storageError) { alert("Ошибка файла: " + storageError.message); return; }
+    try {
+        // Загрузка файла
+        const fileName = `${Date.now()}_${file.name}`;
+        const { error: uploadError } = await db.storage
+            .from('arts')
+            .upload(fileName, file);
 
-    // Получаем ссылку
-    const { data: publicUrlData } = supabase.storage.from('arts').getPublicUrl(fileName);
+        if (uploadError) throw uploadError;
 
-    // Сохраняем пост в БД
-    const { error: dbError } = await supabase
-        .from('posts')
-        .insert([{ 
-            title: title, 
-            description: descr, // В БД у тебя колонка 'description'
-            image_url: publicUrlData.publicUrl, 
-            likes: 0 
-        }]);
+        // Получение ссылки
+        const { data: publicUrlData } = db.storage.from('arts').getPublicUrl(fileName);
 
-    if (dbError) { alert("Ошибка БД: " + dbError.message); return; }
-
-    alert("Арт успешно загружен!");
-    render();
-}
-
-// Функция получения постов с сервера
-async function render() {
-    let gallery = document.getElementById('gallery');
-    if (!gallery) return;
-
-    // Запрос в базу данных
-    let { data: posts, error } = await supabase
-        .from('posts')
-        .select('*');
-
-    if (error) { console.error(error); return; }
-
-    gallery.innerHTML = '';
-    posts.forEach(post => {
-        gallery.innerHTML += `
-            <div class="card">
-                <h2>${post.title}</h2>
-                <p>${post.description}</p>
-                <img src="${post.image_url}" width="200">
-                <button onclick="LikePost(${post.id})">🤍 ${post.likes}</button>
-            </div>
-        `;
-    });
-}
-
-// Лайк (теперь он обновляет базу)
-async function LikePost(postId) {
-    // В реальном проекте тут нужна логика проверки лайкал ли юзер, 
-    // но для начала просто делаем инкремент в базе
-    const { data, error } = await supabase
-        .from('posts')
-        .select('likes')
-        .eq('id', postId)
-        .single();
-
-    if (data) {
-        await supabase
+        // Запись в БД
+        const { error: dbError } = await db
             .from('posts')
-            .update({ likes: data.likes + 1 })
-            .eq('id', postId);
-        render();
+            .insert([{ 
+                title: titleInput.value, 
+                description: descrInput.value,
+                image_url: publicUrlData.publicUrl,
+                likes: 0 
+            }]);
+
+        if (dbError) throw dbError;
+
+        alert("Арт успешно загружен!");
+        window.location.href = "index.html"; // Возврат на главную
+    } catch (err) {
+        console.error(err);
+        alert("Ошибка: " + err.message);
     }
 }
+
+// 3. Функция рендера (для главной страницы)
+async function render() {
+    const gallery = document.getElementById('gallery');
+    if (!gallery || !db) return;
+
+    const { data: posts, error } = await db
+        .from('posts')
+        .select('*')
+        .order('id', { ascending: false });
+
+    if (error) return console.error(error);
+
+    gallery.innerHTML = posts.map(post => `
+        <div class="card">
+            <h2>${post.title}</h2>
+            <p>${post.description}</p>
+            <img src="${post.image_url}" width="200" alt="${post.title}">
+            <button onclick="LikePost(${post.id}, ${post.likes})">🤍 ${post.likes}</button>
+        </div>
+    `).join('');
+}
+
+// 4. Лайк
+async function LikePost(id, currentLikes) {
+    if (!db) return;
+    const { error } = await db
+        .from('posts')
+        .update({ likes: currentLikes + 1 })
+        .eq('id', id);
+
+    if (!error) render();
+}
+
+// Автозапуск рендера на главной
+document.addEventListener('DOMContentLoaded', render);
